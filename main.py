@@ -1,6 +1,6 @@
 #========================= IMPORTS =========================#
 # External libraries
-from psychopy import core, visual, event, logging
+from psychopy import visual, core, event, logging
 import os
 import glob
 
@@ -36,6 +36,13 @@ def ShowText(Window, Text, RefreshRate, Duration):
         Window.flip()
         pass
 
+def ShowMovie(Window, MoviePath):
+    Movie = visual.MovieStim3(Window, MoviePath, flipVert=False)
+    while Movie.status != visual.FINISHED:
+        Movie.draw()
+        Window.flip()
+        pass
+
 
 def FrameWait(Window, RefreshRate, Duration):
     Frames = int(RefreshRate*Duration)
@@ -45,10 +52,10 @@ def FrameWait(Window, RefreshRate, Duration):
 
 #========================= PROGRAM =========================#
 # # Easiest timing to implement is core.wait(t), but least accurate
-# # Can use core.Clock() which can be accurate to 1ms, but it excutes with code order, irrespective 
+# # Can use core.Clock() which can be accurate to 1ms, but it excutes with code order, irrespective
 # # of Frame Rate. Therefore, timings are precise to the nearest frame, but can be inconsistent
 # # The most consistent and accurate way to measure time is then to tie the timings to the frame rate
-# # However, this assumes that no frames will be dropped, as this will affect the timing. 
+# # However, this assumes that no frames will be dropped, as this will affect the timing.
 # # NOTE: Some GPUs (esp. integrated) do not support frame syncing
 # # We can detect dropped frames following:
 # #   https://www.psychopy.org/general/timing/detectingFrameDrops.html
@@ -69,6 +76,11 @@ for Image in Images:
     ShowImage(Win, Image, RefreshRate, 2)
     ShowText(Win, 'Wait for next image', RefreshRate, 1)
 
+Movies = GetImages("{}/Movies/*.mp4".format(os.getcwd()))
+
+for Movie in Movies:
+    ShowMovie(Win, Movie)
+
 print('Dropped Frames were {}'.format(Win.nDroppedFrames))
 
 Win.close()
@@ -80,7 +92,7 @@ Win.close()
 
 # ExpTime = 5 # Seconds
 
-# for frameN in range(int(ExpTime*RefreshRate)):   
+# for frameN in range(int(ExpTime*RefreshRate)):
 #     if int(RefreshRate*1) <= frameN < int(RefreshRate*4):  # Present fixation for a subset of frames
 #         fixation.draw()
 #     if int(RefreshRate*2) <= frameN < int(RefreshRate*3):  # Present stim for a different subset
