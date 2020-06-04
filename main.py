@@ -61,21 +61,26 @@ def FrameWait(Window, RefreshRate, Duration):
 # # We can detect dropped frames following:
 # #   https://www.psychopy.org/general/timing/detectingFrameDrops.html
 
+# Some examples for PyLSL: 
+# https://github.com/labstreaminglayer/liblsl-Python/blob/master/pylsl/examples
+
 RefreshRate = GetRefreshRateWindows() # FPS
 
 Images = GetImages("{}/Images/*.jpg".format(os.getcwd()))
 
 markers = {'Test' : [0],
-           'Text' : [1]}
+           'Text' : [1],
+           'Image' : [2],
+           'Video' : [3]}
 
-counter = np.max(list(markers.values()))
-# Add image markers
-for i in range(len(Images)):
-    markers.update({'Image_{}'.format(i):counter})
-    counter += 1
+# counter = np.max(list(markers.values()))
+# # Add image markers
+# for i in range(len(Images)):
+#     markers.update({'Image_{}'.format(i):counter})
+#     counter += 1
 
 # Initialize LSL stream
-info = StreamInfo(name='LSL_Stream', type = 'Markers', channel_count = 1, 
+info = StreamInfo(name='Stream', type = 'Markers', channel_count = 1, 
                   channel_format='int32', source_id='LSL_Stream_001')
 outlet = StreamOutlet(info)
 
@@ -93,18 +98,22 @@ Win.refreshThreshold = 1/RefreshRate + 0.1/1000.
 logging.console.setLevel(logging.WARNING)
 
 for Image in Images[0:3]:
+    outlet.push_sample(markers['Image'])
     ShowImage(Win, Image, RefreshRate, 2)
+    outlet.push_sample(markers['Text'])
     ShowText(Win, 'Wait for next image', RefreshRate, 1)
 
 Movies = GetImages("{}/Movies/*.mp4".format(os.getcwd()))
 
 for Movie in Movies:
+    outlet.push_sample(markers['Video'])
     ShowMovie(Win, Movie)
-
-print('Dropped Frames were {}'.format(Win.nDroppedFrames))
 
 Win.close()
 # core.quit()
+
+print('Dropped Frames were {}'.format(Win.nDroppedFrames))
+
 
 # gabor = visual.GratingStim(Win, tex='sin', mask='gauss', sf=5,
 #     name='gabor', autoLog=False)
