@@ -75,7 +75,7 @@ for i in range(len(Images)):
     counter += 1
 
 # Initialize LSL stream
-info = StreamInfo(name='LSL_Stream', type = 'Markers', channel_count = 1, 
+info = StreamInfo(name='LSL_Stream', type = 'Markers', channel_count = 1,
                   channel_format='int32', source_id='LSL_Stream_001')
 outlet = StreamOutlet(info)
 
