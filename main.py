@@ -1,9 +1,10 @@
 #========================= IMPORTS =========================#
 # External libraries
 from psychopy import core, visual, event, logging
+from pylsl import StreamInfo, StreamOutlet
 import os
 import glob
-
+import numpy as np
 
 #========================= DEFINITIONS =========================#
 
@@ -55,6 +56,27 @@ def FrameWait(Window, RefreshRate, Duration):
 
 RefreshRate = GetRefreshRateWindows() # FPS
 
+Images = GetImages("{}/Images/*.jpg".format(os.getcwd()))
+
+markers = {'Test' : [0],
+           'Text' : [1]}
+
+counter = np.max(list(markers.values()))
+# Add image markers
+for i in range(len(Images)):
+    markers.update({'Image_{}'.format(i):counter})
+    counter += 1
+
+# Initialize LSL stream
+info = StreamInfo(name='LSL_Stream', type = 'Markers', channel_count = 1, 
+                  channel_format='int32', source_id='LSL_Stream_001')
+outlet = StreamOutlet(info)
+
+# Test comms
+for _ in range(4):
+    outlet.push_sample(markers['Test'])
+    core.wait(0.5)
+
 Win = visual.Window(size=(800, 600))
 
 Win.recordFrameIntervals = True
@@ -63,15 +85,14 @@ Win.refreshThreshold = 1/RefreshRate + 0.1/1000.
 
 logging.console.setLevel(logging.WARNING)
 
-Images = GetImages("{}/Images/*.jpg".format(os.getcwd()))
-
-for Image in Images:
+for Image in Images[0:3]:
     ShowImage(Win, Image, RefreshRate, 2)
     ShowText(Win, 'Wait for next image', RefreshRate, 1)
 
 print('Dropped Frames were {}'.format(Win.nDroppedFrames))
 
 Win.close()
+# core.quit()
 
 # gabor = visual.GratingStim(Win, tex='sin', mask='gauss', sf=5,
 #     name='gabor', autoLog=False)
