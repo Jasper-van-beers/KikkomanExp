@@ -15,15 +15,70 @@ def GetRefreshRateWindows():
     return getattr(settings, 'DisplayFrequency')
 
 
+# Should record participant condition as well
+# -> In 'engaged' or 'disenganged'
+#    -> Should this be done a priori? 
+#    -> If total amount of participants known
+#       -> I can make a script which pre-assigns participants'
+#          group, based on their participant ID
+def GetParticipantInfo(List_of_completed_participants):
+    ExistingIDs = np.genfromtxt(List_of_completed_participants, comments='#')
+    if ExistingIDs.size > 1:
+        ParticipantID = int(ExistingIDs[-1] + 1)
+    else:
+        ParticipantID = 1
+    
+    return ParticipantID
+
+
+def RecordParticipantIDs(List_of_completed_participants, ParticipantID):
+    filename = List_of_completed_participants.split('\\')[-1]
+    ExistingIDs = np.genfromtxt(List_of_completed_participants, comments='#')
+    if ExistingIDs.size > 1:
+        ExistingIDs = np.append(ExistingIDs, ParticipantID)
+    else:
+        ExistingIDs = np.array([0, ParticipantID])
+    ExistingIDs = ExistingIDs.astype(int)
+    np.savetxt(filename, ExistingIDs, fmt='%i')
+    return None
+
+
 def GetImages(FolderPath):
     imgs_path = glob.glob(FolderPath)
     return imgs_path
+
+
+# Assume ImageList contains lists of images of each stimulus category
+# Each index in ImageList corresponds to a different stimulus category
+# For each category, there is a list of images (more precisely, filepaths
+# to images) which will be first randomized. 
+def RandomizeImageOrder(ImageList, seed = 0):
+    RandImageList = []
+    RandomizedImageOrder = []
+    np.random.seed(seed)
+    # Randomize Image order within each category
+    for Images in ImageList:
+        N = len(Images)
+        RandImageIndices = np.arange(0, N, 1)
+        np.random.shuffle(RandImageIndices)
+        RandImages = [Images[i] for i in RandImageIndices]
+        RandImageList.append(RandImages)
+        RandomizedImageOrder.append(RandImageIndices)
+
+    CatOrder = np.zeros((N, len(ImageList)))
+    CatOrder[:, 1] = 1
+    CatOrder[:, 2] = 2
+
+    [np.random.shuffle(i) for i in CatOrder]
+
+    return RandImageList, RandomizedImageOrder, CatOrder
 
 
 def ShowImage(Window, ImagePath, RefreshRate, Duration, ImScale = (1, 1)):
     Image = visual.ImageStim(Window, image = ImagePath, size = ImScale)
     Frames = int(RefreshRate*Duration)
     for frame in range(Frames):
+        CheckQuitWindow(Window)
         Image.draw()
         Window.flip()
         pass
@@ -33,13 +88,16 @@ def ShowText(Window, Text, RefreshRate, Duration):
     Frames = int(RefreshRate*Duration)
     Stim = visual.TextStim(Window, text=Text)
     for frame in range(Frames):
+        CheckQuitWindow(Window)
         Stim.draw()
         Window.flip()
         pass
 
+
 def ShowMovie(Window, MoviePath):
     Movie = visual.MovieStim3(Window, MoviePath, flipVert=False)
     while Movie.status != visual.FINISHED:
+        CheckQuitWindow(Window)
         Movie.draw()
         Window.flip()
         pass
@@ -49,6 +107,15 @@ def FrameWait(Window, RefreshRate, Duration):
     Frames = int(RefreshRate*Duration)
     for frame in range(Frames):
         Window.flip()
+
+
+def CheckQuitWindow(Window):
+    keys = event.getKeys()
+    for key in keys:
+        if 'esc' in key:
+            Window.close()
+            core.quit()
+    return None
 
 
 #========================= PROGRAM =========================#
@@ -63,69 +130,154 @@ def FrameWait(Window, RefreshRate, Duration):
 
 # Some examples for PyLSL: 
 # https://github.com/labstreaminglayer/liblsl-Python/blob/master/pylsl/examples
+# Some examples for PsychoPy and PyLSL
+# https://github.com/kaczmarj/psychopy-lsl
+
+print('Welcome!')
+
+print('Generating Participant ID')
+# Get path to list of (completed) participants. Program will automatically keep track of participants
+# through this file. It can be edited by the user if necessary.
+# Participant '0' does not exist. They are there to avoid warnings arising from importing an empty file
+Path2LoP = "{}\LoP.txt".format(os.getcwd())
+ParticipantID = GetParticipantInfo(Path2LoP)
+
+print('\tParticipant ID = {}'.format(ParticipantID))
 
 RefreshRate = GetRefreshRateWindows() # FPS
 
-Images = GetImages("{}/Images/*.jpg".format(os.getcwd()))
+# These are the subfolder names of the images located in the 
+# folder 'Images'.
+CategoryNames = ['Faces', 'Flowers', 'Grey']
 
-markers = {'Test' : [0],
-           'Text' : [1],
-           'Image' : [2],
-           'Video' : [3]}
+Images = []
 
-# counter = np.max(list(markers.values()))
-# # Add image markers
-# for i in range(len(Images)):
-#     markers.update({'Image_{}'.format(i):counter})
-#     counter += 1
+for cat in CategoryNames:
+    imgs = GetImages("{}/Images/{}/*.jpg".format(os.getcwd(), cat))
+    Images.append(imgs)
+
+# So that each participant has a different order of images, we use their participantID
+# as the seed for the RNG. 
+RandImages, ImageOrder, CategoryOrder = RandomizeImageOrder(Images, seed=ParticipantID)
+NumCategories = len(RandImages)
+
+# Split the image sets into before and after
+# NOTE: int() rounds down to the nearest integer, so int(4.9) = 4
+# We want to round down such that we can split the image stimuli in 
+# two equal portions; one for Phase 1 and another for Phase 3
+NPhaseStim = int(len(RandImages[0])/2)
+P1Imgs, P1ImgOrder, P1CatOrder = RandImages[:][0:NPhaseStim], ImageOrder[:][0:NPhaseStim], CategoryOrder[:][0:NPhaseStim]
+P3Imgs, P3ImgOrder, P3CatOrder = RandImages[:][NPhaseStim:(2*NPhaseStim)], ImageOrder[:][NPhaseStim:(2*NPhaseStim)], CategoryOrder[:][NPhaseStim:(2*NPhaseStim)]
+
+Movies = GetImages("{}/Movies/*.mp4".format(os.getcwd()))
+
+# Define default Marker Labels
+MarkerLabels = ['Test', 'Text', 'Play', 'Pause', 'Start', 'End', 'Movie']
+
+# Generate Stimuli Marker Labels
+for cat in CategoryNames:
+    MarkerLabels.append("Image_{}".format(cat))
+
+# Generate a dictionary for the markers
+markers = {}
+for m in range(len(MarkerLabels)):
+    markers.update({MarkerLabels[m] : [m]})
 
 # Initialize LSL stream
 info = StreamInfo(name='Stream', type = 'Markers', channel_count = 1, 
                   channel_format='int32', source_id='LSL_Stream_001')
 outlet = StreamOutlet(info)
 
-# Test comms
-for _ in range(4):
-    outlet.push_sample(markers['Test'])
-    core.wait(0.5)
 
+# Set up PyschoPy window parameters
 Win = visual.Window(size=(800, 600))
-
 Win.recordFrameIntervals = True
-
-Win.refreshThreshold = 1/RefreshRate + 0.1/1000.
-
+Win.refreshThreshold = 1/RefreshRate + 1/1000.
 logging.console.setLevel(logging.WARNING)
 
-for Image in Images[0:3]:
-    outlet.push_sample(markers['Image'])
-    ShowImage(Win, Image, RefreshRate, 2)
-    outlet.push_sample(markers['Text'])
-    ShowText(Win, 'Wait for next image', RefreshRate, 1)
 
-Movies = GetImages("{}/Movies/*.mp4".format(os.getcwd()))
+# Once ready, hit spacebar to begin experiment
+print('[PHASE 1] - Press the spacebar to begin')
+event.waitKeys(keyList=['space'])
 
+# Once spacebar has been hit, broadcast a start marker
+outlet.push_sample(markers['Start'])
+
+#======================================================
+# PHASE 1
+#======================================================
+
+# Present Image Stimuli
+for i in range(NPhaseStim):
+    for c in range(NumCategories):
+        category = int(P1CatOrder[i][c])
+        Image = P1Imgs[category][i]
+        CheckQuitWindow(Win)
+        outlet.push_sample(markers['Image_{}'.format(CategoryNames[category])])
+        ShowImage(Win, Image, RefreshRate, 2)
+        outlet.push_sample(markers['Text'])
+        ShowText(Win, '+', RefreshRate, 1)
+
+# Send Pause marker to indicate start of AAT session, 
+# and pause of the monitor stimuli presentation 
+outlet.push_sample(markers['Pause'])
+# Begin (pre) AAT session
+ShowText(Win, 'Mobile AAT Phase', RefreshRate, 1)
+print('[PHASE 1] - END')
+
+#======================================================
+# PHASE 2
+#======================================================
+# Press spacebar once AAT is completed, and participants
+# are ready to watch the movie
+print('\n[PHASE 2] - Press the spacebar to begin the movie')
+event.waitKeys(keyList=['space'])
+# Send a play marker to indicate beginning of movie 
+# presentation
+outlet.push_sample(markers['Play'])
+
+# For each movie file
 for Movie in Movies:
-    outlet.push_sample(markers['Video'])
+    # Push a movie marker
+    outlet.push_sample(markers['Movie'])
+    # Show the movie
     ShowMovie(Win, Movie)
 
-Win.close()
-# core.quit()
+# Send pause marker to indicate end of movie
+outlet.push_sample(markers['Pause'])
+print('[Phase 2] - END')
 
-print('Dropped Frames were {}'.format(Win.nDroppedFrames))
 
+#======================================================
+# PHASE 3
+#======================================================
+# Once participants are ready, press spacebar to 
+# begin phase 3 
+print('[Phase 3]  - Press the spacebar to begin')
+event.waitKeys(keyList=['space'])
+# Send play marker to indicate beginning of phase 3
+outlet.push_sample(markers['Play'])
 
-# gabor = visual.GratingStim(Win, tex='sin', mask='gauss', sf=5,
-#     name='gabor', autoLog=False)
-# fixation = visual.GratingStim(Win, tex=None, mask='gauss', sf=0, size=0.02,
-#     name='fixation', autoLog=False)
+# Present Image Stimuli
+for i in range(NPhaseStim):
+    for c in range(NumCategories):
+        category = int(P3CatOrder[i][c])
+        Image = P3Imgs[category][i]
+        CheckQuitWindow(Win)
+        outlet.push_sample(markers['Image_{}'.format(CategoryNames[category])])
+        ShowImage(Win, Image, RefreshRate, 2)
+        outlet.push_sample(markers['Text'])
+        ShowText(Win, '+', RefreshRate, 1)
 
-# ExpTime = 5 # Seconds
+# Broadcast Pause marker to indicate start of AAT
+outlet.push_sample(markers['Pause'])
+# Begin (post) AAT session
+ShowText(Win, 'Mobile AAT Phase', RefreshRate, 1)
+print('[PHASE 3] - END')
+print('Experiment end, press esc to close.')
+CheckQuitWindow(Win)
 
-# for frameN in range(int(ExpTime*RefreshRate)):
-#     if int(RefreshRate*1) <= frameN < int(RefreshRate*4):  # Present fixation for a subset of frames
-#         fixation.draw()
-#     if int(RefreshRate*2) <= frameN < int(RefreshRate*3):  # Present stim for a different subset
-#         gabor.phase += 0.1  # Increment by 10th of cycle
-#         gabor.draw()
-#     Win.flip()
+RecordParticipantIDs(Path2LoP, ParticipantID)
+
+# Print number of dropped frames 
+# print('Dropped Frames were {}'.format(Win.nDroppedFrames))
