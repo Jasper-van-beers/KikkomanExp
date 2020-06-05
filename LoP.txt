@@ -1,0 +1,3 @@
+# Note that participant '0' does not exist. This value is placed here to avoid warnings stemming
+# from importing an 'empty' file
+0
