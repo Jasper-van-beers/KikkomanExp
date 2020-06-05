@@ -184,7 +184,11 @@ for m in range(len(MarkerLabels)):
     markers.update({MarkerLabels[m] : [m]})
 
 # Initialize LSL stream
+<<<<<<< HEAD
+info = StreamInfo(name='LSL_Stream', type = 'Markers', channel_count = 1,
+=======
 info = StreamInfo(name='Stream', type = 'Markers', channel_count = 1, 
+>>>>>>> 8256bfab4b09497b0d4a7567b4265e24af557c7e
                   channel_format='int32', source_id='LSL_Stream_001')
 outlet = StreamOutlet(info)
 
