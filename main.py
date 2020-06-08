@@ -564,8 +564,6 @@ if RunExperiment:
 
 
     # Set up PyschoPy window parameters
-    # WinH = 720
-    # WinW = 1080
     WinH = 900
     WinW = 1600
     bgcolor = [0.1, 0.1, 0.1]
