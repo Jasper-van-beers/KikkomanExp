@@ -297,7 +297,7 @@ def RandomizeImageOrder(ImageList, seed = 0):
 
     [np.random.shuffle(i) for i in CatOrder]
 
-    return RandImageList, RandomizedImageOrder, CatOrder
+    return np.array(RandImageList), np.array(RandomizedImageOrder), np.array(CatOrder)
 
 
 
@@ -691,8 +691,8 @@ if RunExperiment:
     # We want to round down such that we can split the image stimuli in 
     # two equal portions; one for Phase 1 and another for Phase 3
     NPhaseStim = int(len(RandImages[0])/2)
-    P1Imgs, P1ImgOrder, P1CatOrder = RandImages[:][0:NPhaseStim], ImageOrder[:][0:NPhaseStim], CategoryOrder[:][0:NPhaseStim]
-    P3Imgs, P3ImgOrder, P3CatOrder = RandImages[:][NPhaseStim:(2*NPhaseStim)], ImageOrder[:][NPhaseStim:(2*NPhaseStim)], CategoryOrder[:][NPhaseStim:(2*NPhaseStim)]
+    P1Imgs, P1ImgOrder, P1CatOrder = RandImages[:, 0:NPhaseStim], ImageOrder[:, 0:NPhaseStim], CategoryOrder[0:NPhaseStim, :]
+    P3Imgs, P3ImgOrder, P3CatOrder = RandImages[:, NPhaseStim:(2*NPhaseStim)], ImageOrder[:, NPhaseStim:(2*NPhaseStim)], CategoryOrder[NPhaseStim:(2*NPhaseStim), :]
 
     Movies = GetImages("{}/Movies/*.mp4".format(os.getcwd()))
 
@@ -895,9 +895,16 @@ if RunExperiment:
     # begin phase 3 
     print('[Phase 3]  - Press the spacebar to begin')
     event.waitKeys(keyList=['space'])
+    
+    # Initialize data arrays before sending markers, to minimize differences
+    # in processing time between participants
+    P3EmojiGridResponses = np.zeros((int(NPhaseStim*NumCategories), 2))
+    P3PresentedImageList = []
+
     # Send play marker to indicate beginning of phase 3
     outlet.push_sample(markers['Play'])
 
+    idx = 0
     # Present Image Stimuli
     for i in range(NPhaseStim):
         for c in range(NumCategories):
@@ -909,10 +916,17 @@ if RunExperiment:
             outlet.push_sample(markers['Image_{}'.format(CategoryNames[category])])
             ShowImage(Win, Image, RefreshRate, 2)
             MousePos = ShowEmojiGrid(Win, RefreshRate)
-            P1EmojiGridResponses[idx] = MousePos
+            P3EmojiGridResponses[idx] = MousePos
+            P3PresentedImageList.append("{}_{}".format(CategoryNames[category], Image.split('\\')[-1][:-4]))
+            idx += 1
 
     # Broadcast Pause marker to indicate start of AAT
     outlet.push_sample(markers['Pause'])
+
+    # Save EmojiGrid data
+    SaveImageResponseData('P3_EmojiGrid', P3PresentedImageList, P3EmojiGridResponses, ParticipantINFO[0], 
+                            ColNames = ['Valence', 'Arousal'], DataCautious=False)
+
     # Begin (post) AAT session
     ShowText(Win, 'Mobile AAT Phase', RefreshRate, 1)
     print('[PHASE 3] - END')
@@ -924,7 +938,7 @@ if RunExperiment:
         RecordParticipantIDs(Path2LoP, ParticipantID)
 
     # Print number of dropped frames 
-    # print('Dropped Frames were {}'.format(Win.nDroppedFrames))
+    print('Dropped Frames were {}'.format(Win.nDroppedFrames))
 
 
 else:
