@@ -176,7 +176,7 @@ def RecordParticipantIDs(List_of_completed_participants, ParticipantID):
 # with the supplied VASLabels. VASLabels is a list of the two extremes
 # of the VAS; with the first element corresponding to the left-most 
 # extreme
-def ShowVAS(Window, Question, VASLabels, RefreshRate, TickLims = [-15, 15]):
+def ShowVAS(Window, Question, VASLabels, RefreshRate, TickLims = [-15, 0, 15]):
     Slider = visual.Slider(Window, ticks = TickLims, 
                            labels = VASLabels,
                            granularity = 0,
@@ -204,12 +204,13 @@ def ShowVAS(Window, Question, VASLabels, RefreshRate, TickLims = [-15, 15]):
     Slider.reset()
     Window.flip()
 
-    return Res/TickLims[1]
+    return Res/TickLims[-1]
 
 
 
-def ShowSlider(Window, Question, Labels, Ticks, RefreshRate):
-    Slider = visual.Slider(Window, ticks = Ticks, labels = Labels, pos = (0, -0.25), granularity = 1)
+def ShowSlider(Window, Question, Labels, Ticks, RefreshRate, Style = 'rating', Size = (1.2, 0.1)):
+    Slider = visual.Slider(Window, ticks = Ticks, labels = Labels, pos = (0, -0.25), granularity = 1, 
+                            style=Style, size = Size, labelHeight = 0.07)
     Text = visual.TextStim(Window, text = Question, pos = (0, 0.55), bold = True, height = 0.15)
     Instruction = visual.TextStim(Window, text = 'Please indicate your agreement with the above statement on the scale below',
                                   pos = (0, 0.2), italic = True, height = 0.05)
@@ -224,7 +225,7 @@ def ShowSlider(Window, Question, Labels, Ticks, RefreshRate):
         Res = Slider.getRating()
         if Res != None:
             Waiting = False
-            for frame in range(int(RefreshRate*0.5)):
+            for frame in range(int(RefreshRate*0.3)):
                 Slider.draw()
                 Text.draw()
                 Window.flip()
@@ -256,7 +257,7 @@ def AskFoodNeophobia(Window, RefreshRate):
 
     i = 0
     for question in Questions.keys():
-        Rating = ShowSlider(Window, question, SliderLabels, SliderTickMarkers, RefreshRate)
+        Rating = ShowSlider(Window, question, SliderLabels, SliderTickMarkers, RefreshRate, Style=['radio'], Size = (1.1, 0.1))
         # Check if rating should be reversed
         if Questions[question]:
             Rating = -1 * Rating
@@ -318,14 +319,16 @@ def ShowImage(Window, ImagePath, RefreshRate, Duration, Scale = 1):
         pass
 
 
-def ShowText(Window, Text, RefreshRate, Duration):
+
+def ShowText(Window, Text, RefreshRate, Duration, Position=(0,0), Height=0.15):
     Frames = int(RefreshRate*Duration)
-    Stim = visual.TextStim(Window, text=Text)
+    Stim = visual.TextStim(Window, text=Text, pos=Position, height=Height)
     for frame in range(Frames):
         CheckQuitWindow(Window)
         Stim.draw()
         Window.flip()
         pass
+
 
 
 def ShowMovie(Window, MoviePath, Scale = 1):
@@ -353,13 +356,14 @@ def ShowMovie(Window, MoviePath, Scale = 1):
 #       PosOnGrid = [-1, 1] is the top left
 #       PosOnGrid = [-1, -1] is bottom left
 #       PosOnGrid = [1, -1] is the bottom right
-def ShowEmojiGrid(Window, RefreshRate, Scale = 1):
+def ShowEmojiGrid(Window, RefreshRate, Scale = 1, Position = (0, 0)):   
+    WinSize = Window.size
+
     # Get outer image of EmojiGrid (Emojis)
     EmojiGrid_Path = "{}/Images/EmojiGrid/EmojiGrid_outside.jpg".format(os.getcwd())
-    EmojiGrid = visual.ImageStim(Window, image = EmojiGrid_Path, units = 'pix')
+    EmojiGrid = visual.ImageStim(Window, image = EmojiGrid_Path, units = 'pix', pos = Position)
 
     # Maintain Image Aspect Ratio, based on smallest Window dimension
-    WinSize = Window.size
     ImSize = EmojiGrid.size
     RelaSize = WinSize/ImSize
     ImScale = np.min(RelaSize * Scale)
@@ -367,7 +371,7 @@ def ShowEmojiGrid(Window, RefreshRate, Scale = 1):
 
     # Get inner image of EmojiGrid (Grid)
     Grid_EmojiGrid_Path = "{}/Images/EmojiGrid/EmojiGrid_inside.jpg".format(os.getcwd())
-    GridBox = visual.ImageStim(Window, image = Grid_EmojiGrid_Path, units = 'pix')
+    GridBox = visual.ImageStim(Window, image = Grid_EmojiGrid_Path, units = 'pix', pos = Position)
     GridSize = GridBox.size
     # Ratio of EmojiGrid_outside to EmojiGrid_inside
     Ratio = np.min(ImSize/GridSize)
@@ -404,17 +408,16 @@ def ShowEmojiGrid(Window, RefreshRate, Scale = 1):
         ClickLoc.draw()
         Window.flip()
 
-    # GridSize is experssed w.r.t WinSize
-    # Since the image is centered around zero, the image spans 
-    # half the total number of pixels in each direction from
-    # the origin
-    SectorSize = GridSize*WinSize/2
-    # Mouse position is also given w.r.t WinSize
+    # Get the top left hand vertex of the EmojiGrid Grid box and multiply it by 2 to get the size
+    # of the EmojiGrid in the window, in pixels.
+    NormGridSize = (GridBox.verticesPix[-1])*2
+
+    # Mouse position is also given w.r.t WinSize, convert this ratio into pixels 
     MPosPix = MPos*WinSize
 
-    # Get position on grid, ranging from [-1, 1] in x and y, with 
+    # Express Mouse position w.r.t EmojiGrid, ranging from [-1, 1] in x and y, with 
     # origin at [0, 0]
-    PosOnGrid = MPosPix/SectorSize
+    PosOnGrid = MPosPix/NormGridSize
 
     return PosOnGrid
 
@@ -446,6 +449,156 @@ def SaveImageResponseData(Filename, ImgList, Data, ParticipantID, ColNames = [],
         print('[INFO] - I have made a file called: {} with the current data'.format(NewName.split('\\')[-1]))
     else:
         DF.to_csv(csvfile, sep=',', index=False)
+
+    return None
+
+
+def ShowEmoGrInstruction(Window, Instructions, RefreshRate, Scale = 1.5):
+
+    TextStimDict = {}
+
+    NumIn = len(Instructions)
+    Res = 0.28
+
+    for line in range(NumIn):
+        NewPos = (-0.48, (0.8-line*Res))
+        if line == 0:
+            H = 0.15
+        else:
+            H = 0.08
+        TextStim = visual.TextStim(Window, text = Instructions[line], pos = NewPos, alignText='left', height = H)
+        DictEntry = {'{}'.format(line):TextStim}
+        TextStimDict.update(DictEntry)
+
+    WinSize = Window.size/2
+
+    Position = (0.5*Window.size[0]/2, 0)
+
+    # Get outer image of EmojiGrid (Emojis)
+    EmojiGrid_Path = "{}/Images/EmojiGrid/EmojiGrid_outside.jpg".format(os.getcwd())
+    EmojiGrid = visual.ImageStim(Window, image = EmojiGrid_Path, units = 'pix', pos = Position)
+
+    # Maintain Image Aspect Ratio, based on smallest Window dimension
+    ImSize = EmojiGrid.size
+    RelaSize = WinSize/ImSize
+    ImScale = np.min(RelaSize * Scale)
+    EmojiGrid.setSize(ImSize*ImScale)
+
+    # Get inner image of EmojiGrid (Grid)
+    Grid_EmojiGrid_Path = "{}/Images/EmojiGrid/EmojiGrid_inside.jpg".format(os.getcwd())
+    GridBox = visual.ImageStim(Window, image = Grid_EmojiGrid_Path, units = 'pix', pos = Position)
+    GridSize = GridBox.size
+    # Ratio of EmojiGrid_outside to EmojiGrid_inside
+    Ratio = np.min(ImSize/GridSize)
+    GridBox.setSize(EmojiGrid.size/Ratio)
+
+    # Initialize mouse object
+    mouse = event.Mouse()
+
+    WaitingInput = True
+    while WaitingInput:
+        # Check if esc has been hit, if so, quit
+        CheckQuitWindow(Window)
+
+        # Draw instrucitons
+        for line in range(NumIn):
+            TextStimDict['{}'.format(line)].draw()
+
+        # Draw EmojiGrid
+        EmojiGrid.draw()
+        GridBox.draw()
+        Window.flip()
+
+        # Get clicks from mouse
+        Clicks = mouse.getPressed()
+        # If left mouse button is clicked, and this click occured 
+        # within the region of the grid, then store mouse position
+        # and end loop
+        if Clicks[0] and mouse.isPressedIn(GridBox):
+            MPos = mouse.getPos()
+            WaitingInput = False
+    
+    # Provide some user feedback of click location with a red cross. 
+    ClickLoc = visual.TextStim(Window, text='+', color = (1, 0, 0), pos=MPos)
+    # Show click location for half a second
+    for frame in range(int(RefreshRate*0.5)):
+
+        # Draw instrucitons
+        for line in range(NumIn):
+            TextStimDict['{}'.format(line)].draw()
+
+        EmojiGrid.draw()
+        GridBox.draw()
+        ClickLoc.draw()
+        Window.flip()
+
+    # Get the top left hand vertex of the EmojiGrid Grid box and multiply it by 2 to get the size
+    # of the EmojiGrid in the window, in pixels.
+    NormGridSize = (GridBox.verticesPix[-1])*2
+
+    # Mouse position is also given w.r.t WinSize, convert this ratio into pixels 
+    MPosPix = MPos*WinSize
+
+    # Express Mouse position w.r.t EmojiGrid, ranging from [-1, 1] in x and y, with 
+    # origin at [0, 0]
+    PosOnGrid = MPosPix/NormGridSize
+
+    return PosOnGrid
+
+
+def ShowImInstruction(Window, Instructions, ImagePath, RefreshRate, Scale = 1):
+    TextStimDict = {}
+    
+    NumIn = len(Instructions)
+    Res = 0.28
+
+    for line in range(NumIn):
+        NewPos = (-0.48, (0.8-line*Res))
+        if line == 0:
+            H = 0.15
+        else:
+            H = 0.08
+        TextStim = visual.TextStim(Window, text = Instructions[line], pos = NewPos, alignText='left', height = H)
+        DictEntry = {'{}'.format(line):TextStim}
+        TextStimDict.update(DictEntry)
+
+    WinSize = Window.size/2
+
+    Position = (0.5*Window.size[0]/2, 0)
+
+    Image = visual.ImageStim(Window, image = ImagePath, units = 'pix', pos = Position)
+    ImSize = Image.size
+    RelaSize = WinSize/ImSize
+    ImScale = np.min(RelaSize*Scale)
+    Image.setSize(ImSize*ImScale)
+
+    # Initialize mouse object
+    mouse = event.Mouse()
+
+    NextBox = visual.TextStim(Window, text = 'Next', pos = (0.9, -0.9), alignText='center', height = H)
+
+    WaitingInput = True
+    while WaitingInput:
+        # Check if esc has been hit, if so, quit
+        CheckQuitWindow(Window)
+
+        # Draw instrucitons
+        for line in range(NumIn):
+            TextStimDict['{}'.format(line)].draw()
+
+        # Draw EmojiGrid
+        Image.draw()
+        NextBox.draw()
+        Window.flip()
+
+        # Get clicks from mouse
+        Clicks = mouse.getPressed()
+        # If left mouse button is clicked, and this click occured 
+        # within the region of the grid, then store mouse position
+        # and end loop
+        if Clicks[0] and mouse.isPressedIn(NextBox):
+            MPos = mouse.getPos()
+            WaitingInput = False
 
     return None
 
@@ -506,20 +659,27 @@ if RunExperiment:
         print('[INFO] - RUNNING IN DEVELOPER MODE, DEFAULTING TO PARTICIPANT ID = 0')
 
     ParticipantID = int(ParticipantINFO[0])
-
     print('[INFO] Running experiment for ParticipantID = {}'.format(ParticipantID))
 
     RefreshRate = GetRefreshRateWindows() # FPS
 
+    # Get practice images
+    PracticeImages = GetImages("{}/Images/Practice/*.jpg".format(os.getcwd()))
+
     # These are the subfolder names of the images located in the 
     # folder 'Images'.
-    CategoryNames = ['Faces', 'Flowers', 'Grey']
+    CategoryNames = ['Asian', 'Dutch', 'Molded']
+
+    # NOTE: Change for final experiment
+    ############
+    LimIMGs = 20
+    ############
 
     Images = []
-
     for cat in CategoryNames:
         imgs = GetImages("{}/Images/{}/*.jpg".format(os.getcwd(), cat))
-        Images.append(imgs)
+        Images.append(imgs[0:LimIMGs])
+        # Images.append(imgs)
 
     # So that each participant has a different order of images, we use their participantID
     # as the seed for the RNG. 
@@ -536,12 +696,16 @@ if RunExperiment:
 
     Movies = GetImages("{}/Movies/*.mp4".format(os.getcwd()))
 
+    #======================================================
+    # LSL STREAM PARAMETERS
+    #======================================================
     # Define default Marker Labels
     MarkerLabels = ['Test', 
                     'General Questions', 
                     'Neophobia', 
                     'Practice', 
-                    'Text', 
+                    'Text',
+                    'Fixation',
                     'Play', 
                     'Pause', 
                     'Start', 
@@ -562,7 +726,9 @@ if RunExperiment:
                     channel_format='int32', source_id='LSL_Stream_001')
     outlet = StreamOutlet(info)
 
-
+    #======================================================
+    # PSYCHOPY WINDOW PARAMETERS
+    #======================================================
     # Set up PyschoPy window parameters
     WinH = 900
     WinW = 1600
@@ -570,9 +736,12 @@ if RunExperiment:
     Win = visual.Window(size=(WinW, WinH), units='norm', color = bgcolor)
     Win.recordFrameIntervals = True
     Win.refreshThreshold = 1/RefreshRate + 1/1000.
-    logging.console.setLevel(logging.WARNING)
+    # logging.console.setLevel(logging.WARNING)
 
-    # General questions
+
+    #======================================================
+    # VAS & GENERAL QUESTIONS
+    #======================================================
     GenQuestions = {'How hungry are you right now?':['Not at all','Extremely'],
                     'How full do you feel right now?':['Not at all','Extremely'],
                     'How familiar are you with Asian food?':['Not at all','Extremely']}
@@ -586,7 +755,9 @@ if RunExperiment:
         Response = ShowVAS(Win, question, GenQuestions[question], RefreshRate)
         ParticipantINFO.append(Response)
 
-    # Save participant information and general question responses
+    #======================================================
+    # FOOD NEOPHOBIA SCALE (FNS)
+    #======================================================
     # NOTE: CHANGE DataCautious = True for final version
     Save2ColCSV('General_Data', AllFields, ParticipantINFO, ParticipantINFO[0], DataCautious=False)
 
@@ -604,11 +775,52 @@ if RunExperiment:
     # NOTE: CHANGE DataCautious = True for final version
     Save2ColCSV('Neophobia', FNSQuestions, FNSAnswers, ParticipantINFO[0], DataCautious=False)
 
+    #======================================================
+    # PRACTICE AND EMOJIGRID INSTRUCTIONS
+    #======================================================
     print('\n[PRACTICE] - Press the spacebar to begin practice trials')
+    ShowText(Win, 'Instructions', RefreshRate, 0.1)
     event.waitKeys(keyList=['space'])
+
+    Instructions_1 = ['EmojiGrid Response Tool',
+                    'On your right is the EmojiGrid',
+                    'For parts of this experiment, we will ask you to rate images using this tool',
+                    'Simply click a location on the grid which best represents how you feel about the images',
+                    'Do not think too much about it and go with your initial feeling!',
+                    'To proceed, use the EmojiGrid to describe how you feel right now']
+
+    _DummyPos = ShowEmoGrInstruction(Win, Instructions_1, RefreshRate)
+
+    EgImgPath = "F:\AE MSc C&O\TNO\Kikkoman\Experiment\KikkomanExp\Images\IMG_0019.JPG"
+    Instructions_2 = ['EmojiGrid Rating Process',
+                      'First, you will be presented with an Image',
+                      'After some time the image will disappear and then the EmojiGrid will appear',
+                      'Use the EmojiGrid to rate how the image made you feel, remember there are no wrong answers!',
+                      'Click "Next" to start the practice trials']
+
+    ShowImInstruction(Win, Instructions_2, EgImgPath, RefreshRate)
+
+    PracticeEmojiGridResponses = np.zeros((int(len(PracticeImages)), 2))
+    PracticePresentedImageList = []
+
+    ShowText(Win, 'The Practice trials will begin shortly...', RefreshRate, 2, Height = 0.08)
+
     outlet.push_sample(markers['Practice'])
 
-    # TODO: Practice trials
+    idx = 0
+    for img in PracticeImages:
+        CheckQuitWindow(Win)
+        ShowText(Win, '+', RefreshRate, 1)
+        ShowImage(Win, img, RefreshRate, 2)
+        MousePos = ShowEmojiGrid(Win, RefreshRate)
+        PracticeEmojiGridResponses[idx] = MousePos
+        PracticePresentedImageList.append("Practice_{}".format(img.split('\\')[-1][:-4]))
+        idx += 1
+
+    SaveImageResponseData('Practice_EmojiGrid', PracticePresentedImageList, PracticeEmojiGridResponses, ParticipantINFO[0], 
+                        ColNames = ['Valence', 'Arousal'], DataCautious=False)
+
+    ShowText(Win, 'End of practice. The experiment will begin shortly...', RefreshRate, 0.1, Height = 0.08)
 
     #======================================================
     # PHASE 1
@@ -632,8 +844,8 @@ if RunExperiment:
             category = int(P1CatOrder[i][c])
             Image = P1Imgs[category][i]
             CheckQuitWindow(Win)
-            outlet.push_sample(markers['Text'])
-            ShowText(Win, '+', RefreshRate, 2)
+            outlet.push_sample(markers['Fixation'])
+            ShowText(Win, '+', RefreshRate, 1)
             outlet.push_sample(markers['Image_{}'.format(CategoryNames[category])])
             ShowImage(Win, Image, RefreshRate, 2)
             MousePos = ShowEmojiGrid(Win, RefreshRate)
@@ -692,10 +904,12 @@ if RunExperiment:
             category = int(P3CatOrder[i][c])
             Image = P3Imgs[category][i]
             CheckQuitWindow(Win)
+            outlet.push_sample(markers['Fixation'])
+            ShowText(Win, '+', RefreshRate, 2)
             outlet.push_sample(markers['Image_{}'.format(CategoryNames[category])])
             ShowImage(Win, Image, RefreshRate, 2)
-            outlet.push_sample(markers['Text'])
-            ShowText(Win, '+', RefreshRate, 1)
+            MousePos = ShowEmojiGrid(Win, RefreshRate)
+            P1EmojiGridResponses[idx] = MousePos
 
     # Broadcast Pause marker to indicate start of AAT
     outlet.push_sample(markers['Pause'])
