@@ -843,8 +843,8 @@ if RunExperiment:
         markers.update({MarkerLabels[m] : [m]})
 
     # Initialize LSL stream
-    info = StreamInfo(name='LSL_Stream', type = 'Markers', channel_count = 1,
-                    channel_format='int32', source_id='LSL_Stream_001')
+    info = StreamInfo(name='Marker_Stream', type = 'Markers', channel_count = 1,
+                    channel_format='int32', source_id='Marker_Stream_001')
     outlet = StreamOutlet(info)
 
 
