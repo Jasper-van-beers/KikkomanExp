@@ -4,7 +4,7 @@
 # (where the stimulus will be shown)
 # Which monitor the various windows open on can be selected
 # when intializing their respective objects.
-# This way we can show participants only what we want them 
+# This way we can show participants only what we want them
 # to see.
 
 #========================= IMPORTS =========================#
@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 
 #========================= DEFINITIONS =========================#
-# For documentation on the definitions, see Documentation file. 
+# For documentation on the definitions, see Documentation file.
 # Filename: 'Kikkoman Expansion Experiment Documentation.docx'
 
 
@@ -30,8 +30,8 @@ def GetRefreshRateWindows():
 
 
 def SetColorPalette(color, ManualAssign = []):
-    # If user inputted colors manually, and all colors are specified, set 
-    # color palette to user input. 
+    # If user inputted colors manually, and all colors are specified, set
+    # color palette to user input.
     if len(ManualAssign) == 4:
         Background, Text, Slider, Marker = ManualAssign
 
@@ -47,10 +47,10 @@ def SetColorPalette(color, ManualAssign = []):
         # If user inputted dominat color is a known color palette, then set colors
         if color.lower() in colorDict.keys():
             Background, Text, Slider, Marker = colorDict[color.lower()]
-        # If user input is unknown, use default color. 
+        # If user input is unknown, use default color.
         else:
             Background, Text, Slider, Marker = colorDict['default']
-    
+
     return Background, Text, Slider, Marker
 
 
@@ -98,11 +98,11 @@ def GetParticipantInfo(Path2ListOfParticipants, GroupAssignment, Developer=False
         Group = 'Disengaged'
 
     # Fixed fields (i.e. unchangable in dialog box)
-    FixedFieldDict = {'Participant ID':ParticipantID, 
+    FixedFieldDict = {'Participant ID':ParticipantID,
                       'Group':Group}
 
     # Fields which require user input
-    VariableFieldDict = {'Age':[], 
+    VariableFieldDict = {'Age':[],
                          'Gender':['Male', 'Female'],
                          'Height [cm]':[],
                          'Weight [kg]':[],
@@ -110,7 +110,7 @@ def GetParticipantInfo(Path2ListOfParticipants, GroupAssignment, Developer=False
 
     AllFields = []
 
-    # Build Dialog box based on above fields 
+    # Build Dialog box based on above fields
     DlgBx = gui.Dlg(title='Participant Information')
     for field in FixedFieldDict.keys():
         DlgBx.addFixedField('{}:'.format(field), FixedFieldDict[field])
@@ -146,8 +146,8 @@ def GenSavePath(ParticipantID, DataFolder = 'ExpData'):
         os.chdir(TopDir)
         os.mkdir(SaveFolder)
         os.chdir(cwd)
-    
-    # Check if Participant folder exists, otherwise create it 
+
+    # Check if Participant folder exists, otherwise create it
     ParticipantFolder = 'Participant_{}'.format(ParticipantID)
     ParticipantPath = "{}\\{}".format(SavePath, ParticipantFolder)
     if not os.path.isdir(ParticipantPath):
@@ -160,7 +160,7 @@ def GenSavePath(ParticipantID, DataFolder = 'ExpData'):
 
 
 def Save2ColCSV(Filename, Fields, Data, ParticipantID, DataCautious = True):
-    # Generate the unique save path for the participant 
+    # Generate the unique save path for the participant
     ParticipantPath = GenSavePath(ParticipantID)
 
     # Create data array to save
@@ -185,15 +185,15 @@ def Save2ColCSV(Filename, Fields, Data, ParticipantID, DataCautious = True):
 
 
 def RecordParticipantIDs(Path2ListOfParticipants, ParticipantID):
-    # Find file containing the list of completed participants and open it 
+    # Find file containing the list of completed participants and open it
     filename = Path2ListOfParticipants.split('\\')[-1]
     ExistingIDs = np.genfromtxt(Path2ListOfParticipants, comments='#')
-    # Add current participant ID to this list 
+    # Add current participant ID to this list
     if ExistingIDs.size > 1:
         ExistingIDs = np.append(ExistingIDs, ParticipantID)
     else:
         ExistingIDs = np.array([0, ParticipantID])
-    # Save the file  
+    # Save the file
     ExistingIDs = ExistingIDs.astype(int)
     np.savetxt(filename, ExistingIDs, fmt='%i')
     return None
@@ -202,25 +202,25 @@ def RecordParticipantIDs(Path2ListOfParticipants, ParticipantID):
 
 def ShowVAS(Window, Question, VASLabels, RefreshRate, TickLims = [-15, 0, 15], MarkerColor = 'DarkSlateGrey', TextColor = 'White', SliderColor = 'LightGrey'):
     # Create slider object
-    Slider = visual.Slider(Window, ticks = TickLims, 
+    Slider = visual.Slider(Window, ticks = TickLims,
                            labels = VASLabels,
                            granularity = 0,
                            style='triangleMarker',
                            pos = (0, -0.25),
                            color = SliderColor)
     # Create text object, which displays 'Question'
-    Text = visual.TextStim(Window, text = Question, pos = (0, 0.55), bold = True, height = 0.15, color = TextColor)
+    Text = visual.TextStim(Window, text = Question, pos = (0, 0.55), bold = True, height = 0.15, color = TextColor, alignText="center")
     # Create instruction object, below 'Question'
     Instruction = visual.TextStim(Window, text = 'Please click the location on the line below which best describes how you feel',
-                                 pos = (0, 0.2), 
+                                 pos = (0, 0.2),
                                  italic = True, height = 0.05, color = TextColor)
     # Set slider bar color
     Slider.marker.color = MarkerColor
 
-    # While waiting for a response, show slider, question and instruction 
+    # While waiting for a response, show slider, question and instruction
     Waiting = True
     while Waiting:
-        # Check if 'esc' has been hit 
+        # Check if 'esc' has been hit
         CheckQuitWindow(Window)
         Slider.draw()
         Text.draw()
@@ -229,7 +229,7 @@ def ShowVAS(Window, Question, VASLabels, RefreshRate, TickLims = [-15, 0, 15], M
         # Retrieve response, if any
         Res = Slider.getRating()
         # Once response is received, stop loop and show visual feedback of response
-        # for 0.3 seconds 
+        # for 0.3 seconds
         if Res != None:
             Waiting = False
             for frame in range(int(RefreshRate*0.3)):
@@ -247,7 +247,7 @@ def ShowVAS(Window, Question, VASLabels, RefreshRate, TickLims = [-15, 0, 15], M
 
 def ShowSlider(Window, Question, Labels, Ticks, RefreshRate, Style = 'rating', Size = (1.2, 0.1), MarkerColor = 'DarkSlateGrey', TextColor = 'White', SliderColor = 'LightGrey'):
     # Create slider object
-    Slider = visual.Slider(Window, ticks = Ticks, labels = Labels, pos = (0, -0.25), granularity = 1, 
+    Slider = visual.Slider(Window, ticks = Ticks, labels = Labels, pos = (0, -0.25), granularity = 1,
                             style=Style, size = Size, labelHeight = 0.07, color = SliderColor)
     # Create text object, which displays 'Question'
     Text = visual.TextStim(Window, text = Question, pos = (0, 0.55), bold = True, height = 0.15, color = TextColor)
@@ -257,10 +257,10 @@ def ShowSlider(Window, Question, Labels, Ticks, RefreshRate, Style = 'rating', S
     #Set slider bar color
     Slider.marker.color = MarkerColor
 
-    # While waiting for a response, show slider, question and instruction 
+    # While waiting for a response, show slider, question and instruction
     Waiting = True
     while Waiting:
-        # Check if 'esc' has been hit 
+        # Check if 'esc' has been hit
         CheckQuitWindow(Window)
         Slider.draw()
         Text.draw()
@@ -269,7 +269,7 @@ def ShowSlider(Window, Question, Labels, Ticks, RefreshRate, Style = 'rating', S
         # Retrieve response, if any
         Res = Slider.getRating()
         # Once response is received, stop loop and show visual feedback of response
-        # for 0.3 seconds 
+        # for 0.3 seconds
         if Res != None:
             Waiting = False
             for frame in range(int(RefreshRate*0.3)):
@@ -308,16 +308,16 @@ def AskFoodNeophobia(Window, RefreshRate, MarkerColor = 'DarkSlateGrey', TextCol
     i = 0
     # For each question
     for question in Questions.keys():
-        Rating = ShowSlider(Window, question, SliderLabels, SliderTickMarkers, RefreshRate, Style=['radio'], 
+        Rating = ShowSlider(Window, question, SliderLabels, SliderTickMarkers, RefreshRate, Style=['radio'],
                             Size = (1.1, 0.1), MarkerColor = MarkerColor, SliderColor = SliderColor, TextColor = TextColor)
         # Check if rating should be reversed
         if Questions[question]:
             Rating = -1 * Rating
-        # Convert score to scale 1 - 7 
+        # Convert score to scale 1 - 7
         Score = Rating + 4
         # Store answers
         Answers[i] = Score
-        # Move to next answer index 
+        # Move to next answer index
         i += 1
 
     return list(Questions.keys()), Answers
@@ -342,7 +342,7 @@ def RandomizeImageOrder(ImageList, seed = 0):
         RandImageIndices = np.arange(0, N, 1)
         # Shuffle indices
         np.random.shuffle(RandImageIndices)
-        # Shuffle images based on shuffled indices 
+        # Shuffle images based on shuffled indices
         RandImages = [Images[i] for i in RandImageIndices]
         # Store outcomes of shuffling
         RandImageList.append(RandImages)
@@ -353,7 +353,7 @@ def RandomizeImageOrder(ImageList, seed = 0):
     CatOrder[:, 1] = 1
     CatOrder[:, 2] = 2
 
-    # Shuffle order row-wise 
+    # Shuffle order row-wise
     [np.random.shuffle(i) for i in CatOrder]
 
     return np.array(RandImageList), np.array(RandomizedImageOrder), np.array(CatOrder)
@@ -378,32 +378,32 @@ def ShowImage(Window, ImagePath, RefreshRate, Duration, Scale = 1):
         CheckQuitWindow(Window)
         Image.draw()
         Window.flip()
-    
+
     return None
 
 
 
 def ShowText(Window, Text, RefreshRate, Duration, Position=(0,0), Height=0.15, TextColor = 'White'):
     # Create text object
-    Stim = visual.TextStim(Window, text=Text, pos=Position, height=Height, color=TextColor)
+    Stim = visual.TextStim(Window, text=Text, pos=Position, height=Height, color=TextColor, alignText="center")
     # Define duration of text presentation, in frames
     Frames = int(RefreshRate*Duration)
     for frame in range(Frames):
         CheckQuitWindow(Window)
         Stim.draw()
         Window.flip()
-    
+
     return None
 
 
 
 def ShowMovie(Window, MoviePath, Scale = 1):
     bgcolor = Window.color
-    # Set window background color to black. 
+    # Set window background color to black.
     Window.setColor([-1, -1, -1])
     # Create movie object
     Movie = visual.MovieStim3(Window, MoviePath, flipVert=False, units='pix')
-    
+
     # Maintain Movie Aspect Ratio, based on smallest Window dimension
     WinSize = Window.size
     MovSize = Movie.size
@@ -415,7 +415,7 @@ def ShowMovie(Window, MoviePath, Scale = 1):
         CheckQuitWindow(Window)
         Movie.draw()
         Window.flip()
-    
+
     # Return background color to the original color
     Window.setColor(bgcolor)
 
@@ -423,7 +423,7 @@ def ShowMovie(Window, MoviePath, Scale = 1):
 
 
 
-def ShowEmojiGrid(Window, RefreshRate, Scale = 1, Position = (0, 0)):   
+def ShowEmojiGrid(Window, RefreshRate, Scale = 1, Position = (0, 0)):
     WinSize = Window.size
 
     # Get outer image of EmojiGrid (Emojis)
@@ -459,14 +459,14 @@ def ShowEmojiGrid(Window, RefreshRate, Scale = 1, Position = (0, 0)):
 
         # Get clicks from mouse
         Clicks = mouse.getPressed()
-        # If left mouse button is clicked, and this click occured 
+        # If left mouse button is clicked, and this click occured
         # within the region of the grid, then store mouse position
         # and end loop
         if Clicks[0] and mouse.isPressedIn(GridBox):
             MPos = mouse.getPos()
             WaitingInput = False
-    
-    # Provide some user feedback of click location with a red cross. 
+
+    # Provide some user feedback of click location with a red cross.
     ClickLoc = visual.TextStim(Window, text='+', color = (1, 0, 0), pos=MPos)
     # Show click location for half a second
     for frame in range(int(RefreshRate*0.5)):
@@ -479,10 +479,10 @@ def ShowEmojiGrid(Window, RefreshRate, Scale = 1, Position = (0, 0)):
     # of the EmojiGrid in the window, in pixels.
     NormGridSize = (GridBox.verticesPix[-1])*2
 
-    # Mouse position is also given w.r.t WinSize, convert this ratio into pixels 
+    # Mouse position is also given w.r.t WinSize, convert this ratio into pixels
     MPosPix = MPos*WinSize
 
-    # Express Mouse position w.r.t EmojiGrid, ranging from [-1, 1] in x and y, with 
+    # Express Mouse position w.r.t EmojiGrid, ranging from [-1, 1] in x and y, with
     # origin at [0, 0]
     #       PosOnGrid = [1, 1] is the top right
     #       PosOnGrid = [-1, 1] is the top left
@@ -513,7 +513,7 @@ def SaveImageResponseData(Filename, ImgList, Data, ParticipantID, ColNames = [],
         for col in range(len(Data[0])):
             df_data.update({'Col_{}'.format(col):Data[:, col]})
 
-    # Create dataframe for saving         
+    # Create dataframe for saving
     DF = pd.DataFrame(data = df_data)
 
     # Check if such a file exists already
@@ -543,7 +543,7 @@ def ShowEmoGrInstruction(Window, Instructions, RefreshRate, Scale = 1.5, TextCol
     Res = 0.28
 
     # Generate the text objects for Instructions. Place them appropriately in the
-    # window 
+    # window
     for line in range(NumIn):
         # Update position of text object
         NewPos = (-0.48, (0.8-line*Res))
@@ -560,7 +560,7 @@ def ShowEmoGrInstruction(Window, Instructions, RefreshRate, Scale = 1.5, TextCol
     # Halve the window size
     WinSize = Window.size/2
 
-    # Compute the position, in pixels, where the EmojiGrid will be centered. 
+    # Compute the position, in pixels, where the EmojiGrid will be centered.
     Position = (0.5*Window.size[0]/2, 0)
 
     # Get outer image of EmojiGrid (Emojis)
@@ -600,14 +600,14 @@ def ShowEmoGrInstruction(Window, Instructions, RefreshRate, Scale = 1.5, TextCol
 
         # Get clicks from mouse
         Clicks = mouse.getPressed()
-        # If left mouse button is clicked, and this click occured 
+        # If left mouse button is clicked, and this click occured
         # within the region of the grid, then store mouse position
         # and end loop
         if Clicks[0] and mouse.isPressedIn(GridBox):
             MPos = mouse.getPos()
             WaitingInput = False
-    
-    # Provide some user feedback of click location with a red cross. 
+
+    # Provide some user feedback of click location with a red cross.
     ClickLoc = visual.TextStim(Window, text='+', color = (1, 0, 0), pos=MPos)
     # Show click location for half a second
     for frame in range(int(RefreshRate*0.5)):
@@ -625,10 +625,10 @@ def ShowEmoGrInstruction(Window, Instructions, RefreshRate, Scale = 1.5, TextCol
     # of the EmojiGrid in the window, in pixels.
     NormGridSize = (GridBox.verticesPix[-1])*2
 
-    # Mouse position is also given w.r.t WinSize, convert this ratio into pixels 
+    # Mouse position is also given w.r.t WinSize, convert this ratio into pixels
     MPosPix = MPos*WinSize
 
-    # Express Mouse position w.r.t EmojiGrid, ranging from [-1, 1] in x and y, with 
+    # Express Mouse position w.r.t EmojiGrid, ranging from [-1, 1] in x and y, with
     # origin at [0, 0]
     PosOnGrid = MPosPix/NormGridSize
 
@@ -645,7 +645,7 @@ def ShowImInstruction(Window, Instructions, ImagePath, RefreshRate, Scale = 1, T
     Res = 0.28
 
     # Generate the text objects for Instructions. Place them appropriately in the
-    # window 
+    # window
     for line in range(NumIn):
         # Update position of text object
         NewPos = (-0.48, (0.8-line*Res))
@@ -662,7 +662,7 @@ def ShowImInstruction(Window, Instructions, ImagePath, RefreshRate, Scale = 1, T
     # Halve the window size
     WinSize = Window.size/2
 
-    # Compute the position, in pixels, where the EmojiGrid will be centered. 
+    # Compute the position, in pixels, where the EmojiGrid will be centered.
     Position = (0.5*Window.size[0]/2, 0)
 
     # Create image object
@@ -696,7 +696,7 @@ def ShowImInstruction(Window, Instructions, ImagePath, RefreshRate, Scale = 1, T
 
         # Get clicks from mouse
         Clicks = mouse.getPressed()
-        # If left mouse button is clicked, and this click occured 
+        # If left mouse button is clicked, and this click occured
         # within the region of the Next 'button', then end the loop
         if Clicks[0] and mouse.isPressedIn(NextBox):
             MPos = mouse.getPos()
@@ -733,7 +733,7 @@ def CheckQuitWindow(Window):
 # # We can detect dropped frames following:
 # #   https://www.psychopy.org/general/timing/detectingFrameDrops.html
 
-# Some examples for PyLSL: 
+# Some examples for PyLSL:
 # https://github.com/labstreaminglayer/liblsl-Python/blob/master/pylsl/examples
 # Some examples for PsychoPy and PyLSL
 # https://github.com/kaczmarj/psychopy-lsl
@@ -741,9 +741,9 @@ def CheckQuitWindow(Window):
 # Set to true to test script and avoid saving over participant data.
 Developer = True
 
-# Assign participants to a (pre-allocated) group 
+# Assign participants to a (pre-allocated) group
 # Here, 0 = Engaged Group, 1 = Disengaged group
-# If GenerateGroupAssignments = True, then the script will 
+# If GenerateGroupAssignments = True, then the script will
 # assign groups, otherwise it will import these from 'Group.txt'
 GenerateGroupAssignments = False
 if GenerateGroupAssignments:
@@ -763,12 +763,12 @@ ParticipantINFO, RunExperiment, AllFields = GetParticipantInfo(Path2LoP, Groups,
 
 # If Dialog box used to fill in participant info was not cancelled
 if RunExperiment:
-    
-    
+
+
     #======================================================
     # DATA IMPORTING
     #======================================================
-    # Indicate in the terminal if the script is being run in developer mode. 
+    # Indicate in the terminal if the script is being run in developer mode.
     if Developer:
         print('[INFO] - RUNNING IN DEVELOPER MODE, DEFAULTING TO PARTICIPANT ID = 0')
 
@@ -782,7 +782,7 @@ if RunExperiment:
     # Get practice images, import all images in Practice folder
     PracticeImages = GetImages("{}/Images/Practice/*.jpg".format(os.getcwd()))
 
-    # These are the subfolder names of the images located in the 
+    # These are the subfolder names of the images located in the
     # folder 'Images'.
     CategoryNames = ['Asian', 'Dutch', 'Molded']
 
@@ -791,7 +791,7 @@ if RunExperiment:
     LimIMGs = 20
     ############
 
-    # Create N x M array where 
+    # Create N x M array where
     # N = Number of Categories and M = Number of images per category
     Images = []
     for cat in CategoryNames:
@@ -800,18 +800,18 @@ if RunExperiment:
         # Images.append(imgs)
 
     # So that each participant has a different order of images, we use their participantID
-    # as the seed for the RNG. 
+    # as the seed for the RNG.
     RandImages, ImageOrder, CategoryOrder = RandomizeImageOrder(Images, seed=ParticipantID)
     NumCategories = len(CategoryNames)
 
     # Split the image sets into Phase 1 and Phase 3 sets (Before and after movie, respectively)
     # NOTE: int() rounds down to the nearest integer, so int(4.9) = 4
-    # We want to round down such that we can split the image stimuli in 
+    # We want to round down such that we can split the image stimuli in
     # two equal portions; one for Phase 1 and another for Phase 3
     NPhaseStim = int(len(RandImages[0])/2)
     P1Imgs, P1ImgOrder, P1CatOrder = RandImages[:, 0:NPhaseStim], ImageOrder[:, 0:NPhaseStim], CategoryOrder[0:NPhaseStim, :]
     P3Imgs, P3ImgOrder, P3CatOrder = RandImages[:, NPhaseStim:(2*NPhaseStim)], ImageOrder[:, NPhaseStim:(2*NPhaseStim)], CategoryOrder[NPhaseStim:(2*NPhaseStim), :]
-    
+
     # Get Movie file path
     Movies = GetImages("{}/Movies/*.mp4".format(os.getcwd()))
 
@@ -821,16 +821,16 @@ if RunExperiment:
     # LSL STREAM PARAMETERS
     #======================================================
     # Define default Marker Labels
-    MarkerLabels = ['Test', 
-                    'General Questions', 
-                    'Neophobia', 
-                    'Practice', 
+    MarkerLabels = ['Test',
+                    'General Questions',
+                    'Neophobia',
+                    'Practice',
                     'Text',
                     'Fixation',
-                    'Play', 
-                    'Pause', 
-                    'Start', 
-                    'End', 
+                    'Play',
+                    'Pause',
+                    'Start',
+                    'End',
                     'Movie']
 
     # Generate Image Stimuli Marker Labels
@@ -855,7 +855,7 @@ if RunExperiment:
     # Set up PyschoPy window parameters
     WinH = 900
     WinW = 1600
-    # Set color palette for experiment 
+    # Set color palette for experiment
     bgcolor , textColor, sliderColor, sliderMarkerColor = SetColorPalette('beige')
     # Define window object
     Win = visual.Window(size=(WinW, WinH), units='norm', color = bgcolor)
@@ -898,7 +898,7 @@ if RunExperiment:
     event.waitKeys(keyList=['space'])
     outlet.push_sample(markers['Neophobia'])
 
-    # Ask FNS 
+    # Ask FNS
     FNSQuestions, FNSAnswers = AskFoodNeophobia(Win, RefreshRate, MarkerColor = sliderMarkerColor, TextColor=textColor, SliderColor=sliderColor)
 
     # Record FNS questions and answers
@@ -915,13 +915,13 @@ if RunExperiment:
     #======================================================
     # PRACTICE AND EMOJIGRID INSTRUCTIONS
     #======================================================
-    # Run EmojiGrid practice trials once the spacebar is pressed 
+    # Run EmojiGrid practice trials once the spacebar is pressed
     print('\n[PRACTICE] - Press the spacebar to begin practice trials')
     ShowText(Win, 'Instructions', RefreshRate, 0.1, TextColor = textColor)
     event.waitKeys(keyList=['space'])
 
-    # Write the instructions for EmojiGrid usage below, first entry is the title 
-    # Subsequent entries indicate instructions on different lines 
+    # Write the instructions for EmojiGrid usage below, first entry is the title
+    # Subsequent entries indicate instructions on different lines
     Instructions_1 = ['EmojiGrid Response Tool',
                     'On your right is the EmojiGrid',
                     'For parts of this experiment, we will ask you to rate images using this tool',
@@ -948,7 +948,7 @@ if RunExperiment:
     PracticeEmojiGridResponses = np.zeros((int(len(PracticeImages)), 2))
     PracticePresentedImageList = []
 
-    # Inform participants that practice trials will begin shortly 
+    # Inform participants that practice trials will begin shortly
     ShowText(Win, 'The Practice trials will begin shortly...', RefreshRate, 2, Height = 0.08, TextColor = textColor)
 
     outlet.push_sample(markers['Practice'])
@@ -965,7 +965,7 @@ if RunExperiment:
         idx += 1
 
     # Save practice trial data (to check if tool is being used appropriately)
-    SaveImageResponseData('Practice_EmojiGrid', PracticePresentedImageList, PracticeEmojiGridResponses, ParticipantINFO[0], 
+    SaveImageResponseData('Practice_EmojiGrid', PracticePresentedImageList, PracticeEmojiGridResponses, ParticipantINFO[0],
                         ColNames = ['Valence', 'Arousal'], DataCautious=False)
 
     # Indicate end of practice trials
@@ -1004,12 +1004,12 @@ if RunExperiment:
             P1PresentedImageList.append("{}_{}".format(CategoryNames[category], Image.split('\\')[-1][:-4]))
             idx += 1
 
-    # Send Pause marker to indicate start of AAT session, 
-    # and pause of the monitor stimuli presentation 
+    # Send Pause marker to indicate start of AAT session,
+    # and pause of the monitor stimuli presentation
     outlet.push_sample(markers['Pause'])
 
     # Save Phase 1 EmojiGrid data
-    SaveImageResponseData('P1_EmojiGrid', P1PresentedImageList, P1EmojiGridResponses, ParticipantINFO[0], 
+    SaveImageResponseData('P1_EmojiGrid', P1PresentedImageList, P1EmojiGridResponses, ParticipantINFO[0],
                             ColNames = ['Valence', 'Arousal'], DataCautious=False)
 
     # Begin (pre) AAT session
@@ -1026,7 +1026,7 @@ if RunExperiment:
     # are ready to watch the movie
     print('\n[PHASE 2] - Press the spacebar to begin the movie')
     event.waitKeys(keyList=['space'])
-    # Send a play marker to indicate beginning of movie 
+    # Send a play marker to indicate beginning of movie
     # presentation
     outlet.push_sample(markers['Play'])
 
@@ -1045,11 +1045,11 @@ if RunExperiment:
     #======================================================
     # PHASE 3
     #======================================================
-    # Once participants are ready, press spacebar to 
-    # begin phase 3 
+    # Once participants are ready, press spacebar to
+    # begin phase 3
     print('[Phase 3]  - Press the spacebar to begin')
     event.waitKeys(keyList=['space'])
-    
+
     # Initialize data arrays before sending markers, to minimize differences
     # in processing time between participants
     P3EmojiGridResponses = np.zeros((int(NPhaseStim*NumCategories), 2))
@@ -1078,7 +1078,7 @@ if RunExperiment:
     outlet.push_sample(markers['Pause'])
 
     # Save EmojiGrid data
-    SaveImageResponseData('P3_EmojiGrid', P3PresentedImageList, P3EmojiGridResponses, ParticipantINFO[0], 
+    SaveImageResponseData('P3_EmojiGrid', P3PresentedImageList, P3EmojiGridResponses, ParticipantINFO[0],
                             ColNames = ['Valence', 'Arousal'], DataCautious=False)
 
     # Begin (post) AAT session
@@ -1091,7 +1091,7 @@ if RunExperiment:
     if not Developer:
         RecordParticipantIDs(Path2LoP, ParticipantID)
 
-    # Print number of dropped frames 
+    # Print number of dropped frames
     print('Dropped Frames were {}'.format(Win.nDroppedFrames))
 
 
