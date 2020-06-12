@@ -788,7 +788,7 @@ if RunExperiment:
 
     # NOTE: Change for final experiment
     ############
-    LimIMGs = 20
+    LimIMGs = 6
     ############
 
     # Create N x M array where
@@ -1084,8 +1084,6 @@ if RunExperiment:
     # Begin (post) AAT session
     ShowText(Win, 'Mobile AAT Phase', RefreshRate, 1, TextColor = textColor)
     print('[PHASE 3] - END')
-    print('Experiment end, press esc to close.')
-    CheckQuitWindow(Win)
 
     # Add participant ID to completed list of participants
     if not Developer:
@@ -1094,6 +1092,8 @@ if RunExperiment:
     # Print number of dropped frames
     print('Dropped Frames were {}'.format(Win.nDroppedFrames))
 
+    print('Experiment end, press esc to close.')
+    event.waitKeys(keyList=['esc'])
 
 else:
     print('[INFO] - User cancelled - Experiment aborted')
