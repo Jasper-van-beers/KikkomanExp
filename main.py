@@ -957,8 +957,8 @@ if RunExperiment:
     idx = 0
     for img in PracticeImages:
         CheckQuitWindow(Win)
-        ShowText(Win, '+', RefreshRate, 1, TextColor = textColor)
-        ShowImage(Win, img, RefreshRate, 2)
+        ShowText(Win, '+', RefreshRate, 0.2, TextColor = textColor)
+        ShowImage(Win, img, RefreshRate, 3)
         MousePos = ShowEmojiGrid(Win, RefreshRate)
         PracticeEmojiGridResponses[idx] = MousePos
         PracticePresentedImageList.append("Practice_{}".format(img.split('\\')[-1][:-4]))
@@ -996,9 +996,9 @@ if RunExperiment:
             Image = P1Imgs[category][i]
             CheckQuitWindow(Win)
             outlet.push_sample(markers['Fixation'])
-            ShowText(Win, '+', RefreshRate, 1, TextColor = textColor)
+            ShowText(Win, '+', RefreshRate, 0.2, TextColor = textColor)
             outlet.push_sample(markers['Image_{}'.format(CategoryNames[category])])
-            ShowImage(Win, Image, RefreshRate, 2)
+            ShowImage(Win, Image, RefreshRate, 3)
             MousePos = ShowEmojiGrid(Win, RefreshRate)
             P1EmojiGridResponses[idx] = MousePos
             P1PresentedImageList.append("{}_{}".format(CategoryNames[category], Image.split('\\')[-1][:-4]))
@@ -1066,9 +1066,9 @@ if RunExperiment:
             Image = P3Imgs[category][i]
             CheckQuitWindow(Win)
             outlet.push_sample(markers['Fixation'])
-            ShowText(Win, '+', RefreshRate, 2, TextColor = textColor)
+            ShowText(Win, '+', RefreshRate, 0.2, TextColor = textColor)
             outlet.push_sample(markers['Image_{}'.format(CategoryNames[category])])
-            ShowImage(Win, Image, RefreshRate, 2)
+            ShowImage(Win, Image, RefreshRate, 3)
             MousePos = ShowEmojiGrid(Win, RefreshRate)
             P3EmojiGridResponses[idx] = MousePos
             P3PresentedImageList.append("{}_{}".format(CategoryNames[category], Image.split('\\')[-1][:-4]))
