@@ -9,7 +9,10 @@
 
 #========================= IMPORTS =========================#
 # External libraries
-from psychopy import core, visual, event, logging, gui
+# Need to import prefs before importing other psychopy modules
+from psychopy import prefs
+prefs.hardware['audioLib'] = ['pyo']
+from psychopy import core, visual, event, logging, gui, sound
 from pylsl import StreamInfo, StreamOutlet
 import os
 import glob
@@ -821,6 +824,7 @@ if RunExperiment:
     # LSL STREAM PARAMETERS
     #======================================================
     # Define default Marker Labels
+    # NOTE: SAVE MARKERS TO CSV SO THAT WE CAN IMPORT LATER
     MarkerLabels = ['Test',
                     'General Questions',
                     'Neophobia',
@@ -831,6 +835,7 @@ if RunExperiment:
                     'Pause',
                     'Start',
                     'End',
+                    'Sound',
                     'Movie']
 
     # Generate Image Stimuli Marker Labels
@@ -847,7 +852,10 @@ if RunExperiment:
                     channel_format='int32', source_id='Marker_Stream_001')
     outlet = StreamOutlet(info)
 
-
+    # Set sound lib
+    mySound = sound.Sound('C', secs = 0.1)
+    outlet.push_sample(markers['Sound'])
+    mySound.play()
 
     #======================================================
     # PSYCHOPY WINDOW PARAMETERS
@@ -864,7 +872,6 @@ if RunExperiment:
     # logging.console.setLevel(logging.WARNING)
 
 
-
     #======================================================
     # VAS & GENERAL QUESTIONS
     #======================================================
@@ -877,6 +884,9 @@ if RunExperiment:
     print('\n[GENERAL QUESTIONS] - Press the spacebar to begin general questions')
     event.waitKeys(keyList=['space'])
     outlet.push_sample(markers['General Questions'])
+
+    outlet.push_sample(markers['Sound'])
+    mySound.play()
 
     # Ask the general questions, and record VAS responses to participant INFO
     for question in GenQuestions.keys():
