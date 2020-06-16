@@ -18,6 +18,7 @@ import os
 import glob
 import numpy as np
 import pandas as pd
+import time
 
 #========================= DEFINITIONS =========================#
 # For documentation on the definitions, see Documentation file.
@@ -451,6 +452,8 @@ def ShowEmojiGrid(Window, RefreshRate, Scale = 1, Position = (0, 0)):
     mouse = event.Mouse()
 
     WaitingInput = True
+    # Measure current time to get reaction time
+    t_start = time.perf_counter()
     while WaitingInput:
         # Check if esc has been hit, if so, quit
         CheckQuitWindow(Window)
@@ -468,6 +471,9 @@ def ShowEmojiGrid(Window, RefreshRate, Scale = 1, Position = (0, 0)):
         if Clicks[0] and mouse.isPressedIn(GridBox):
             MPos = mouse.getPos()
             WaitingInput = False
+    
+    # Record reaction time
+    RT = time.perf_counter() - t_start
 
     # Provide some user feedback of click location with a red cross.
     ClickLoc = visual.TextStim(Window, text='+', color = (1, 0, 0), pos=MPos)
@@ -493,7 +499,7 @@ def ShowEmojiGrid(Window, RefreshRate, Scale = 1, Position = (0, 0)):
     #       PosOnGrid = [1, -1] is the bottom right
     PosOnGrid = MPosPix/NormGridSize
 
-    return PosOnGrid
+    return PosOnGrid, RT
 
 
 
@@ -726,6 +732,21 @@ def CheckQuitWindow(Window):
     return None
 
 
+
+def CheckNumStim(ImageSets):
+    N = len(ImageSets[0][0])
+    IsEqual = True
+    for ImageSet in ImageSets:
+        for category in ImageSet:
+            if len(category) != N:
+                IsEqual = False
+                print('[ERROR] Number of Image stimuli is not equal between phases and/or between image categories.')
+                break
+        if not IsEqual:
+            break
+    return N*IsEqual
+
+
 #========================= PROGRAM =========================#
 # # Easiest timing to implement is core.wait(t), but least accurate
 # # Can use core.Clock() which can be accurate to 1ms, but it excutes with code order, irrespective
@@ -766,8 +787,6 @@ ParticipantINFO, RunExperiment, AllFields = GetParticipantInfo(Path2LoP, Groups,
 
 # If Dialog box used to fill in participant info was not cancelled
 if RunExperiment:
-
-
     #======================================================
     # DATA IMPORTING
     #======================================================
@@ -788,32 +807,42 @@ if RunExperiment:
     # These are the subfolder names of the images located in the
     # folder 'Images'.
     CategoryNames = ['Asian', 'Dutch', 'Molded']
+    NumCategories = len(CategoryNames)
 
     # NOTE: Change for final experiment
     ############
-    LimIMGs = 6
+    LimIMGs = 3
     ############
 
     # Create N x M array where
     # N = Number of Categories and M = Number of images per category
-    Images = []
+    Phase1Images = []
     for cat in CategoryNames:
-        imgs = GetImages("{}/Images/{}/*.jpg".format(os.getcwd(), cat))
-        Images.append(imgs[0:LimIMGs])
-        # Images.append(imgs)
+        imgs = GetImages("{}/Images/Phase1/{}/*.jpg".format(os.getcwd(), cat))
+        Phase1Images.append(imgs[0:LimIMGs])
+        # Phase1Images.append(imgs)
 
     # So that each participant has a different order of images, we use their participantID
     # as the seed for the RNG.
-    RandImages, ImageOrder, CategoryOrder = RandomizeImageOrder(Images, seed=ParticipantID)
-    NumCategories = len(CategoryNames)
+    P1Imgs, P1ImgOrder, P1CatOrder = RandomizeImageOrder(Phase1Images, seed=ParticipantID)
 
-    # Split the image sets into Phase 1 and Phase 3 sets (Before and after movie, respectively)
-    # NOTE: int() rounds down to the nearest integer, so int(4.9) = 4
-    # We want to round down such that we can split the image stimuli in
-    # two equal portions; one for Phase 1 and another for Phase 3
-    NPhaseStim = int(len(RandImages[0])/2)
-    P1Imgs, P1ImgOrder, P1CatOrder = RandImages[:, 0:NPhaseStim], ImageOrder[:, 0:NPhaseStim], CategoryOrder[0:NPhaseStim, :]
-    P3Imgs, P3ImgOrder, P3CatOrder = RandImages[:, NPhaseStim:(2*NPhaseStim)], ImageOrder[:, NPhaseStim:(2*NPhaseStim)], CategoryOrder[NPhaseStim:(2*NPhaseStim), :]
+    # Create N x M array where
+    # N = Number of Categories and M = Number of images per category
+    Phase3Images = []
+    for cat in CategoryNames:
+        imgs = GetImages("{}/Images/Phase3/{}/*.jpg".format(os.getcwd(), cat))
+        Phase3Images.append(imgs[LimIMGs:(2*LimIMGs)])
+        # Phase1Images.append(imgs)
+
+    # So that each participant has a different order of images, we use their participantID
+    # as the seed for the RNG. Note, this seed should be different from that of Phase 1
+    # otherwise the randomization is the same. In this case we add a large number (greater than
+    # the number of participants)
+    P3Imgs, P3ImgOrder, P3CatOrder = RandomizeImageOrder(Phase3Images, seed=int(1000 + ParticipantID))
+
+    NPhaseStim = CheckNumStim([P1Imgs, P3Imgs])
+    if NPhaseStim == 0:
+        print('[ERROR] Number of Image stimuli is not equal between phases and/or between image categories.')
 
     # Get Movie file path
     Movies = GetImages("{}/Movies/*.mp4".format(os.getcwd()))
@@ -856,6 +885,8 @@ if RunExperiment:
     mySound = sound.Sound('C', secs = 0.1)
     outlet.push_sample(markers['Sound'])
     mySound.play()
+
+
 
     #======================================================
     # PSYCHOPY WINDOW PARAMETERS
@@ -955,7 +986,8 @@ if RunExperiment:
     ShowImInstruction(Win, Instructions_2, EgImgPath, RefreshRate, TextColor = textColor)
 
     # Preallocate practice arrays to store practice data
-    PracticeEmojiGridResponses = np.zeros((int(len(PracticeImages)), 2))
+    # 3 Columns for EmojiGrid X, Y and Reaction time
+    PracticeEmojiGridResponses = np.zeros((int(len(PracticeImages)), 3))
     PracticePresentedImageList = []
 
     # Inform participants that practice trials will begin shortly
@@ -969,14 +1001,15 @@ if RunExperiment:
         CheckQuitWindow(Win)
         ShowText(Win, '+', RefreshRate, 0.2, TextColor = textColor)
         ShowImage(Win, img, RefreshRate, 3)
-        MousePos = ShowEmojiGrid(Win, RefreshRate)
-        PracticeEmojiGridResponses[idx] = MousePos
+        MousePos, RT = ShowEmojiGrid(Win, RefreshRate)
+        PracticeEmojiGridResponses[idx, 0:2] = MousePos
+        PracticeEmojiGridResponses[idx, 2] = RT
         PracticePresentedImageList.append("Practice_{}".format(img.split('\\')[-1][:-4]))
         idx += 1
 
     # Save practice trial data (to check if tool is being used appropriately)
     SaveImageResponseData('Practice_EmojiGrid', PracticePresentedImageList, PracticeEmojiGridResponses, ParticipantINFO[0],
-                        ColNames = ['Valence', 'Arousal'], DataCautious=False)
+                        ColNames = ['Valence', 'Arousal', 'Reaction Time [s]'], DataCautious=False)
 
     # Indicate end of practice trials
     ShowText(Win, 'End of practice. The experiment will begin shortly...', RefreshRate, 0.1, Height = 0.08, TextColor = textColor)
@@ -991,8 +1024,9 @@ if RunExperiment:
     event.waitKeys(keyList=['space'])
 
     # Initialize data arrays before sending markers, to minimize differences
-    # in processing time between participants
-    P1EmojiGridResponses = np.zeros((int(NPhaseStim*NumCategories), 2))
+    # in processing time between participants. 
+    # 3 Columns for EmojiGrid X, Y and Reaction time
+    P1EmojiGridResponses = np.zeros((int(NPhaseStim*NumCategories), 3))
     P1PresentedImageList = []
 
     # Once spacebar has been hit, broadcast a start marker
@@ -1009,8 +1043,9 @@ if RunExperiment:
             ShowText(Win, '+', RefreshRate, 0.2, TextColor = textColor)
             outlet.push_sample(markers['Image_{}'.format(CategoryNames[category])])
             ShowImage(Win, Image, RefreshRate, 3)
-            MousePos = ShowEmojiGrid(Win, RefreshRate)
-            P1EmojiGridResponses[idx] = MousePos
+            MousePos, RT = ShowEmojiGrid(Win, RefreshRate)
+            P1EmojiGridResponses[idx, 0:2] = MousePos
+            P1EmojiGridResponses[idx, 2] = RT
             P1PresentedImageList.append("{}_{}".format(CategoryNames[category], Image.split('\\')[-1][:-4]))
             idx += 1
 
@@ -1020,7 +1055,7 @@ if RunExperiment:
 
     # Save Phase 1 EmojiGrid data
     SaveImageResponseData('P1_EmojiGrid', P1PresentedImageList, P1EmojiGridResponses, ParticipantINFO[0],
-                            ColNames = ['Valence', 'Arousal'], DataCautious=False)
+                            ColNames = ['Valence', 'Arousal', 'Reaction Time [s]'], DataCautious=False)
 
     # Begin (pre) AAT session
     # Indicate that participants should now do the AAT section of phase 1
@@ -1052,6 +1087,7 @@ if RunExperiment:
     print('[Phase 2] - END')
 
 
+
     #======================================================
     # PHASE 3
     #======================================================
@@ -1062,7 +1098,8 @@ if RunExperiment:
 
     # Initialize data arrays before sending markers, to minimize differences
     # in processing time between participants
-    P3EmojiGridResponses = np.zeros((int(NPhaseStim*NumCategories), 2))
+    # 3 Columns for EmojiGrid X, Y and Reaction time
+    P3EmojiGridResponses = np.zeros((int(NPhaseStim*NumCategories), 3))
     P3PresentedImageList = []
 
     # Send play marker to indicate beginning of phase 3
@@ -1079,8 +1116,9 @@ if RunExperiment:
             ShowText(Win, '+', RefreshRate, 0.2, TextColor = textColor)
             outlet.push_sample(markers['Image_{}'.format(CategoryNames[category])])
             ShowImage(Win, Image, RefreshRate, 3)
-            MousePos = ShowEmojiGrid(Win, RefreshRate)
-            P3EmojiGridResponses[idx] = MousePos
+            MousePos, RT = ShowEmojiGrid(Win, RefreshRate)
+            P3EmojiGridResponses[idx, 0:2] = MousePos
+            P3EmojiGridResponses[idx, 2] = RT
             P3PresentedImageList.append("{}_{}".format(CategoryNames[category], Image.split('\\')[-1][:-4]))
             idx += 1
 
@@ -1089,7 +1127,7 @@ if RunExperiment:
 
     # Save EmojiGrid data
     SaveImageResponseData('P3_EmojiGrid', P3PresentedImageList, P3EmojiGridResponses, ParticipantINFO[0],
-                            ColNames = ['Valence', 'Arousal'], DataCautious=False)
+                            ColNames = ['Valence', 'Arousal', 'Reaction Time [s]'], DataCautious=False)
 
     # Begin (post) AAT session
     ShowText(Win, 'Mobile AAT Phase', RefreshRate, 1, TextColor = textColor)
@@ -1103,7 +1141,7 @@ if RunExperiment:
     print('Dropped Frames were {}'.format(Win.nDroppedFrames))
 
     print('Experiment end, press esc to close.')
-    event.waitKeys(keyList=['esc'])
+    event.waitKeys(keyList=['escape'])
 
 else:
     print('[INFO] - User cancelled - Experiment aborted')
